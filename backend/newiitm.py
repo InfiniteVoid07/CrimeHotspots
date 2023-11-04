@@ -4,16 +4,19 @@ from openrouteservice import Client
 from shapely.geometry import Polygon, Point
 import pandas as pd
 from datetime import datetime, timedelta
+from geopy.distance import geodesic
 
 # Define the source and destination coordinates
-ls1 = 28.58281
-ls2 = 77.05006
-ld1 = 28.73886
-ld2 = 77.08405
+ls1 = 28.6328
+ls2 = 77.2197
+ld1 = 28.6129
+ld2 = 77.2295
 
-
+# User's location (you can change these values)
+user_lat = float(input("enter the latitude"))
+user_lon = float(input("enter the longitude"))
 # Create a map
-m = folium.Map(location=[ls1, ls2], zoom_start=17)
+m = folium.Map(location=[ls1, ls2], zoom_start=14)
 
 locationsource = f"Latitude: {ls1}, Longitude: {ls2}"
 locationdestin = f"Latitude: {ld1}, Longitude: {ld2}"
@@ -73,14 +76,13 @@ for _ in range(40):
     
     crime_data.append([lat, lon, crime_name, date_str, time_str])
 
-
-
 existing_data = pd.read_csv("crime_data_generated.csv")
 updated_data = pd.concat([existing_data, pd.DataFrame(crime_data, columns=["Latitude", "Longitude", "CrimeName", "Date", "Time"])], ignore_index=True)
 updated_data.to_csv("crime_data_generated.csv", index=False)
-# crime_df.to_csv("crime_data_generated.csv", index=False)
-dict={"Murder":'red',"Rape":'red',"Robbery":'yellow',"Assault":'yellow',"Traffic Violence":'blue',"Disorderly Conduct":'blue'}
-dict2={"Murder":150,"Rape":360,"Robbery":30,"Assault":14,"Traffic Violence":7,"Disorderly Conduct":14}
+
+dict = {"Murder": 'red', "Rape": 'red', "Robbery": 'yellow', "Assault": 'yellow', "Traffic Violence": 'brown', "Disorderly Conduct": 'brown'}
+dict2 = {"Murder": 150, "Rape": 360, "Robbery": 30, "Assault": 14, "Traffic Violence": 7, "Disorderly Conduct": 14}
+
 # Save the generated crime data to a CSV file
 crime_df = pd.DataFrame(updated_data, columns=["Latitude", "Longitude", "CrimeName", "Date", "Time"])
 
@@ -88,31 +90,31 @@ crime_df = pd.DataFrame(updated_data, columns=["Latitude", "Longitude", "CrimeNa
 for index, row in crime_df.iterrows():
     lat, lon, crime_name, date, time = row['Latitude'], row['Longitude'], row['CrimeName'], row['Date'], row['Time']
     point = Point(lon, lat)
+    
     # Check if the point is within the geofence
-    # Get the current date
-    current_date = datetime.now()
-    # Calculate the difference between the current date and the random date
-    date_format = "%Y-%m-%d"
-    # Use datetime.strptime to convert the string to a date
-    date = datetime.strptime(date, date_format)
-    date_difference = current_date - date
-    dayyy=date_difference.days
-    d=dict2[crime_name]
     if route_polygon.contains(point):
-        if (d<=dayyy):
+        # Calculate the difference between the current date and the random date
+        date_format = "%Y-%m-%d"
+        current_date = datetime.now()
+        date = datetime.strptime(date, date_format)
+        date_difference = current_date - date
+        dayyy = date_difference.days
+        d = dict2[crime_name]
+        
+        if d <= dayyy:
             folium.CircleMarker(
                 location=[lat, lon],
-                radius=15,
+                radius=6,
                 color=dict.get(crime_name),
                 fill=True,
-                fill_color=dict.get(crime_name),
-                fill_opacity=1.0,
+                # fill_color=dict.get(crime_name),
+                # fill_opacity=1.0,
                 popup=f"Crime: {crime_name}<br>Date: {date}<br>Time: {time}"
             ).add_to(m)
         else:
             folium.CircleMarker(
                 location=[lat, lon],
-                radius=3,
+                radius=5,
                 color="grey",
                 fill=True,
                 fill_color="grey",
@@ -120,9 +122,43 @@ for index, row in crime_df.iterrows():
                 popup=f"Crime: {crime_name}<br>Date: {date}<br>Time: {time}"
             ).add_to(m)
 
+# Check if the user is within 1 km of any crime location
+user_point = (user_lat, user_lon)
+count=0
+for index, row in crime_df.iterrows():
+    lat, lon, crime_name, date, time = row['Latitude'], row['Longitude'], row['CrimeName'], row['Date'], row['Time']
+    point = Point(lon, lat)
+    
+    # Check if the point is within the geofence
+    if route_polygon.contains(point):
+        lat, lon = row['Latitude'], row['Longitude']
+        crime_point = (lat, lon)
+
+        # Calculate the distance between the user and the crime location
+        distance_m = geodesic(user_point, crime_point).meters
+
+        if distance_m <= 300:
+            print(f"Alert: You are within 250 meters of a crime location")
+            count+=1
+        else:
+            print("safe")
+print(count)
+if (count>=1):
+    locat = f" HIGH CRIME CHANCE WITHIN 250 m DISTANCE Latitude: {user_lat}, Longitude: {user_lon}"
+    folium.Marker([user_lat,user_lon], icon=folium.Icon(color='black'), popup=locat).add_to(m)      
+else:
+    locat = f" CURRENT LOCATION Latitude: {user_lat}, Longitude: {user_lon}"
+    folium.Marker([user_lat,user_lon], icon=folium.Icon(color='purple'), popup=locat).add_to(m) 
+    
+ # for a constant message      
+# message = "This is a constant message"
+# folium.Marker([user_lat, user_lon], popup=folium.Popup(message)).add_to(m)
+
 # Create a GeoJSON layer for the geofence
 folium.GeoJson(route_polygon, name='Geofence', style_function=lambda x: {'color': 'blue'}).add_to(m)
 
 # Save the map to an HTML file
 m.save("source_to_destination_route_with_geofence_legend_crime_data_generated.html")
+
+
 
