@@ -13,7 +13,7 @@ ld2 = 77.08405
 
 
 # Create a map
-m = folium.Map(location=[ls1, ls2], zoom_start=12.5)
+m = folium.Map(location=[ls1, ls2], zoom_start=17)
 
 locationsource = f"Latitude: {ls1}, Longitude: {ls2}"
 locationdestin = f"Latitude: {ld1}, Longitude: {ld2}"
@@ -102,7 +102,7 @@ for index, row in crime_df.iterrows():
         if (d<=dayyy):
             folium.CircleMarker(
                 location=[lat, lon],
-                radius=5,
+                radius=15,
                 color=dict.get(crime_name),
                 fill=True,
                 fill_color=dict.get(crime_name),
@@ -125,5 +125,4 @@ folium.GeoJson(route_polygon, name='Geofence', style_function=lambda x: {'color'
 
 # Save the map to an HTML file
 m.save("source_to_destination_route_with_geofence_legend_crime_data_generated.html")
-
 
