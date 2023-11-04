@@ -2,12 +2,15 @@ import folium
 import random
 from openrouteservice import Client
 from shapely.geometry import Polygon, Point
+import pandas as pd
+from datetime import datetime, timedelta
 
 # Define the source and destination coordinates
 ls1 = 28.58281
 ls2 = 77.05006
 ld1 = 28.73886
 ld2 = 77.08405
+
 
 # Create a map
 m = folium.Map(location=[ls1, ls2], zoom_start=12.5)
@@ -50,32 +53,77 @@ route_coordinates = route['features'][0]['geometry']['coordinates']
 route_polygon = Polygon(route_coordinates)
 
 # Generate random data for points
-points_within_route = []
+crime_data = []
 
-for _ in range(100):
+for _ in range(40):
     lat = random.uniform(ls1, ld1)
-    long = random.uniform(ls2, ld2)
-    point = Point(long, lat)
+    lon = random.uniform(ls2, ld2)
+    crime_name = random.choice(["Murder", "Rape", "Robbery", "Assault", "Traffic Violence", "Disorderly Conduct"])
     
-    # Check if the point is within the geofence
-    if route_polygon.contains(point):
-        points_within_route.append(point)
+    # Generate a random date within the last 4 years
+    today = datetime.now()
+    start_date = today - timedelta(days=4*365)
+    random_date = start_date + timedelta(days=random.randint(0, 4*365))
+    date_str = random_date.strftime("%Y-%m-%d")
+    
+    # Generate a random time
+    hour = random.randint(0, 23)
+    minute = random.randint(0, 59)
+    time_str = f"{hour:02d}:{minute:02d}"
+    
+    crime_data.append([lat, lon, crime_name, date_str, time_str])
 
-# Add markers for points within the route
-for point in points_within_route:
-    lat, lon = point.y, point.x
-    folium.CircleMarker(
-        location=[lat, lon],
-        radius=5,
-        color='red',
-        fill=True,
-        fill_color='red',
-        fill_opacity=0.7,
-    ).add_to(m)
+
+
+existing_data = pd.read_csv("crime_data_generated.csv")
+updated_data = pd.concat([existing_data, pd.DataFrame(crime_data, columns=["Latitude", "Longitude", "CrimeName", "Date", "Time"])], ignore_index=True)
+updated_data.to_csv("crime_data_generated.csv", index=False)
+# crime_df.to_csv("crime_data_generated.csv", index=False)
+dict={"Murder":'red',"Rape":'red',"Robbery":'yellow',"Assault":'yellow',"Traffic Violence":'blue',"Disorderly Conduct":'blue'}
+dict2={"Murder":150,"Rape":360,"Robbery":30,"Assault":14,"Traffic Violence":7,"Disorderly Conduct":14}
+# Save the generated crime data to a CSV file
+crime_df = pd.DataFrame(updated_data, columns=["Latitude", "Longitude", "CrimeName", "Date", "Time"])
+
+# Iterate over the crime data and add markers for each crime location
+for index, row in crime_df.iterrows():
+    lat, lon, crime_name, date, time = row['Latitude'], row['Longitude'], row['CrimeName'], row['Date'], row['Time']
+    point = Point(lon, lat)
+    # Check if the point is within the geofence
+    # Get the current date
+    current_date = datetime.now()
+    # Calculate the difference between the current date and the random date
+    date_format = "%Y-%m-%d"
+    # Use datetime.strptime to convert the string to a date
+    date = datetime.strptime(date, date_format)
+    date_difference = current_date - date
+    dayyy=date_difference.days
+    d=dict2[crime_name]
+    if route_polygon.contains(point):
+        if (d<=dayyy):
+            folium.CircleMarker(
+                location=[lat, lon],
+                radius=5,
+                color=dict.get(crime_name),
+                fill=True,
+                fill_color=dict.get(crime_name),
+                fill_opacity=1.0,
+                popup=f"Crime: {crime_name}<br>Date: {date}<br>Time: {time}"
+            ).add_to(m)
+        else:
+            folium.CircleMarker(
+                location=[lat, lon],
+                radius=3,
+                color="grey",
+                fill=True,
+                fill_color="grey",
+                fill_opacity=1.0,
+                popup=f"Crime: {crime_name}<br>Date: {date}<br>Time: {time}"
+            ).add_to(m)
 
 # Create a GeoJSON layer for the geofence
 folium.GeoJson(route_polygon, name='Geofence', style_function=lambda x: {'color': 'blue'}).add_to(m)
 
 # Save the map to an HTML file
-m.save("source_to_destination_route_with_geofence_legend.html")
+m.save("source_to_destination_route_with_geofence_legend_crime_data_generated.html")
+
 
