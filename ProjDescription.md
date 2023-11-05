@@ -1,6 +1,6 @@
 # CrimeHotspots
 
-**Project Title:** - "Sawdhaan"
+**Project Title:** - "Saavdhaan - Crime Hotspot Detection"
 
 **Project Description:**
 
