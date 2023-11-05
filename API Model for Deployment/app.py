@@ -77,9 +77,9 @@ def generate_map(user_lat, user_lon):
 
         crime_data.append([lat, lon, crime_name, date_str, time_str])
 
-    existing_data = pd.read_csv("crime.csv")
+    existing_data = pd.read_csv("crime_data_generated.csv")
     updated_data = pd.concat([existing_data, pd.DataFrame(crime_data, columns=["Latitude", "Longitude", "CrimeName", "Date", "Time"])], ignore_index=True)
-    updated_data.to_csv("crime.csv", index=False)
+    updated_data.to_csv("crime_data_generated.csv", index=False)
 
     dict = {"Murder": 'red', "Rape": 'red', "Robbery": 'yellow', "Assault": 'yellow', "Traffic Violence": 'brown',
             "Disorderly Conduct": 'brown'}
